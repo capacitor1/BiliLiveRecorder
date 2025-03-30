@@ -681,8 +681,8 @@ namespace BiliLiveRecorder
                     {
                         m_LocalFile.Write(rpacketh);
                         m_LocalFile.Write(Encoding.Default.GetBytes("BiliLiveRecorder " + Form1.Ver));
-                        fs.SetLength(512);
-                        fs.Position = 512;
+                        m_LocalFile.SetLength(512);
+                        m_LocalFile.Position = 512;
                     }
                     m_LocalFile.Write(BitConverter.GetBytes(b.Count));
                     m_LocalFile.Write(b);
@@ -698,8 +698,8 @@ namespace BiliLiveRecorder
                     {
                         m_LocalFile.Write(rpacketh);
                         m_LocalFile.Write(Encoding.Default.GetBytes("BiliLiveRecorder " + Form1.Ver));
-                        fs.SetLength(512);
-                        fs.Position = 512;
+                        m_LocalFile.SetLength(512);
+                        m_LocalFile.Position = 512;
                     }
                     m_LocalFile.Write(BitConverter.GetBytes(b.Length));
                     m_LocalFile.Write(b);
