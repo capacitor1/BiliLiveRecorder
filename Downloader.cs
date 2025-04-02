@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
+using System.Net.Http.Headers;
+
 
 namespace BiliLiveRecorder
 {
@@ -15,21 +15,40 @@ namespace BiliLiveRecorder
         public static ulong TotalUpload = 0;
         public static ulong MsgTotalDownload = 0;
         public static ulong MsgTotalUpload = 0;
-        //public static HttpClient client = new();
+        //public static HttpClient? client;
         public static ArrayPool<byte> shared = ArrayPool<byte>.Shared;
-        public static async Task<int> Download(string fileUrl, Stream destinationStream,HttpClient client,CancellationToken cts)
+        public static async Task<int> Download(string fileUrl, Stream destinationStream,CancellationToken cts)
         {
+            Retry400:
+            HttpClient client = new HttpClient(Form1.httpClientHandler);
+            //if (client == null) client = new HttpClient(Form1.httpClientHandler);
             int ret = -1;
             try
             {
                 client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0");
                 HttpResponseMessage response = await client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead);
-                if (response.StatusCode != System.Net.HttpStatusCode.OK) return (int)response.StatusCode;
+                if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    //Debug.WriteLine(response.StatusCode.ToString());
+                    if ((int)response.StatusCode == 400)
+                    {
+                        //client.Dispose();
+                        //client = null;
+                        //client = new HttpClient(Form1.httpClientHandler);
+                        goto Retry400;
+                    }
+                    else
+                    {
+                        int r =  (int)response.StatusCode;
+                        //client.Dispose();
+                        return r;
+                    }
+                }
                 using (Stream contentStream = await response.Content.ReadAsStreamAsync())
                 {
-                    var buffer = shared.Rent(1048576);
+                    var buffer = shared.Rent(524288);
                     int bytesRead;
-                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length,cts)) > 0)
+                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cts)) > 0)
                     {
                         await destinationStream.WriteAsync(buffer, 0, bytesRead);
                         TotalDownload += (ulong)bytesRead;
@@ -45,9 +64,10 @@ namespace BiliLiveRecorder
             }
             catch(Exception ex) when (ex is not OperationCanceledException)
             {
+                //Debug.WriteLine(ex.Message);
                 ret = -1;
             }
-
+            //client.Dispose();
             return ret;
         }
         public static string CountSize(ulong Size)
