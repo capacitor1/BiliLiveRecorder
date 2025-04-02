@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using System.IO.Compression;
+using System.IO;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
@@ -48,7 +50,6 @@ namespace BiliLiveRecorder
             "{TIME_NOW} : Real time (type string 'yyyy_MM_dd_HH_mm_ss_ffff')",
             "{FILE_EXT} : File extension (type string 'fmp4')"
             ];
-        public static HttpClient client = new();
         public static FileStream fs = new(Path.Combine(Form1.workdir, "Internal/Log/", "Log_" + System.DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_ffff") + ".rlog"), FileMode.OpenOrCreate, FileAccess.Write);
         public class Output
         {
@@ -105,19 +106,12 @@ namespace BiliLiveRecorder
             Output output = new(iD, message, operation, type, OperatedFile, StreamPosition, OperatedLength);
             Form1.OutputLog.Add(output);
         }
-
-        public static readonly byte[] rlogh = {0x52,0x65,0x63,0x6F,0x72,0x64,0x65,0x64,0x4C,0x6F,0x67,0x4F,0x75,0x74,0x70,0x75,
-0x74,0x07,0x21,0x07,0x21,0x00,0x00,0x00,0x19,0x43,0x72,0x65,0x61,0x74,0x65,0x64,
-0x20,0x42,0x79,0x20 };
-        private static readonly byte[] rpacketh = {0x52,0x65,0x63,0x6F,0x72,0x64,0x65,0x64,0x4D,0x65,0x73,0x73,0x61,0x67,0x65,0x53,
-0x74,0x72,0x65,0x61,0x6D,0x00,0x00,0x50,0x61,0x63,0x6B,0x65,0x74,0x73,0x4F,0x72,
-0x69,0x67,0x69,0x6E,0x00,0x00 };
         public static void WriteOutput(Output o)
         {
             lock (locker)//加锁
             {
-                byte[] b = Encoding.Default.GetBytes(JsonSerializer.Serialize(o));
-                fs.Write(BitConverter.GetBytes(b.Length));
+                byte[] b = Encoding.Default.GetBytes(JsonSerializer.Serialize(o) + "\r\n");
+                //fs.Write(BitConverter.GetBytes(b.Length));
                 fs.Write(b);
                 fs.Flush();
             }
@@ -221,7 +215,7 @@ namespace BiliLiveRecorder
                 MemoryStream ms = new MemoryStream();
                 int code = 0, retry1 = 0;
             Label_Retry:
-                code = await Downloader.Download(hlsurl, ms, client,tokenSource.Token);
+                code = await Downloader.Download(hlsurl, ms,tokenSource.Token);
                 if (code == -1)
                 {
                     ShowOutput(id, $"HLS/M3U : Request Error [Internal Error ({code})]", "GET", OperatedFile: hlsurl);
@@ -255,13 +249,6 @@ namespace BiliLiveRecorder
                     {
                         return new(false, []);
                     }
-                }
-                else if (code == 400)
-                {
-                    client.Dispose();
-                    client = new HttpClient();
-                    goto Label_Retry;
-
                 }
                 ShowOutput(id, $"HLS/M3U : Received {hlsurl}", "GET", OperatedFile: hlsurl, OperatedLength: ms.Length);
                 string[] r = Encoding.Default.GetString(ms.ToArray()).Split("\n");
@@ -304,7 +291,7 @@ namespace BiliLiveRecorder
                 var filename = HttpUtility.UrlDecode(uri.Segments.Last());
                 int code = 0, retry1 = 0;
             Label_Retry:
-                code = await Downloader.Download(sequrl, ms, client,tokenSource.Token);
+                code = await Downloader.Download(sequrl, ms,tokenSource.Token);
                 if (code == -1)
                 {
                     retry1++;
@@ -349,12 +336,6 @@ namespace BiliLiveRecorder
                     {
                         return new(false, new());
                     }
-                }
-                else if (code == 400)
-                {
-                    client.Dispose();
-                    client = new HttpClient();
-                    goto Label_Retry;
                 }
                 //
                 //long pos = stream.Position;
@@ -499,7 +480,7 @@ namespace BiliLiveRecorder
                 Form1.PublicForm1.StreamIDList.FindItemWithText(ID).SubItems[1].Text = info["Title"];
                 ShowOutput(ID, $"HLS/INFO : Set stream title '{info["Title"]}'", "GET", OperatedLength: info["Title"].Length);
                 FileStream fss = new(coverfile, FileMode.OpenOrCreate, FileAccess.Write);
-                await Downloader.Download(info["CoverURL"], fss, new HttpClient(),tokenSource.Token);
+                await Downloader.Download(info["CoverURL"], fss,tokenSource.Token);
                 ShowOutput(ID, $"HLS/INFO : Received Cover Image {info["CoverURL"]}", "GET;WRITE", OperatedFile: Path.GetFileName(fss.Name), OperatedLength: fss.Length);
                 fss.Dispose();
 
@@ -610,7 +591,7 @@ namespace BiliLiveRecorder
                     fs.Dispose();
                     parser.Dispose();
                     //ShowOutput(ID, $"HLS/M : {ex.Message}", "-", type: "Error");
-                    ShowOutput(ID, $"HLS/REC : Finish record {Path.GetFileName(fs.Name)} with Error : {ex.Message}", "Error");
+                    //ShowOutput(ID, $"HLS/REC : Finish record {Path.GetFileName(fs.Name)} with Error : {ex.Message}", "Error");
                     Form1.RecordingC--;
                     if (Form1.activestreams.ContainsKey(ID))
                     {
@@ -674,15 +655,15 @@ namespace BiliLiveRecorder
             }
             public void WritePackets(ArraySegment<byte> b)
             {
-                lock (locker)//加锁
+                lock (locker)
                 {
                     if (m_LocalFile == null) return;
                     if (m_LocalFile.Position == 0)
                     {
-                        m_LocalFile.Write(rpacketh);
-                        m_LocalFile.Write(Encoding.Default.GetBytes("BiliLiveRecorder " + Form1.Ver));
-                        m_LocalFile.SetLength(512);
-                        m_LocalFile.Position = 512;
+                        //m_LocalFile.Write(rpacketh);
+                        m_LocalFile.Write(Encoding.Default.GetBytes("MessageStream Version " + Form1.Ver));
+                        m_LocalFile.SetLength(256);
+                        m_LocalFile.Position = 256;
                     }
                     m_LocalFile.Write(BitConverter.GetBytes(b.Count));
                     m_LocalFile.Write(b);
@@ -691,15 +672,15 @@ namespace BiliLiveRecorder
             }
             public void WritePackets(byte[] b)
             {
-                lock (locker)//加锁
+                lock (locker)
                 {
                     if (m_LocalFile == null) return;
                     if (m_LocalFile.Position == 0)
                     {
-                        m_LocalFile.Write(rpacketh);
-                        m_LocalFile.Write(Encoding.Default.GetBytes("BiliLiveRecorder " + Form1.Ver));
-                        m_LocalFile.SetLength(512);
-                        m_LocalFile.Position = 512;
+                        //m_LocalFile.Write(rpacketh);
+                        m_LocalFile.Write(Encoding.Default.GetBytes("MessageStream Version " + Form1.Ver));
+                        m_LocalFile.SetLength(256);
+                        m_LocalFile.Position = 256;
                     }
                     m_LocalFile.Write(BitConverter.GetBytes(b.Length));
                     m_LocalFile.Write(b);
@@ -839,7 +820,6 @@ namespace BiliLiveRecorder
             }
             public void PacketParseAndOutput(byte[] packet)
             {
-                WritePackets(packet);
                 //
                 try
                 {
@@ -847,10 +827,22 @@ namespace BiliLiveRecorder
                     switch (ctype)
                     {
                         case CommandType.HeartBeatReply:
+                            WritePackets(packet);
                             ShowOutput(m_ID, $"HLS/MSG : HeartBeat --> Average Concurrent Users = {BitConverter.ToUInt32(packet[16..20].Reverse().ToArray())}", "RECV", OperatedFile: m_URL, OperatedLength: packet.Length, StreamPosition: m_LocalFile.Position);
                             break;
                         case CommandType.CommandDefault:
-                            ShowOutput(m_ID, $"HLS/MSG : MessagePacket --> {Path.GetFileName(m_LocalFile?.Name)}", "RECV", OperatedFile: m_URL, OperatedLength: packet.Length, StreamPosition: m_LocalFile.Position);
+                            bool isbr = TryDecompress(out byte[] dec,packet[16..]);
+                            if (isbr)
+                            {
+                                WritePackets(dec);
+                                ShowOutput(m_ID, $"HLS/MSG : MessagePacket(Brotli) --> {Path.GetFileName(m_LocalFile?.Name)}", "RECV", OperatedFile: m_URL, OperatedLength: dec.Length, StreamPosition: m_LocalFile.Position);
+                            }
+                            else
+                            {
+                                WritePackets(packet);
+                                ShowOutput(m_ID, $"HLS/MSG : MessagePacket(Raw) --> {Path.GetFileName(m_LocalFile?.Name)}", "RECV", OperatedFile: m_URL, OperatedLength: packet.Length, StreamPosition: m_LocalFile.Position);
+                            }
+                            
                             break;
                         default:
                             throw new Exception("Unsupported CommandType");
@@ -860,6 +852,30 @@ namespace BiliLiveRecorder
                 {
                     ShowOutput(m_ID, $"HLS/MSG : Packet parse failed. ({e.Message})", "RECV", OperatedFile: m_URL, OperatedLength: packet.Length);
                 }
+            }
+            public bool TryDecompress(out byte[] dec, byte[] br)
+            {
+                MemoryStream inStream = new MemoryStream(br);
+                MemoryStream outStream = new MemoryStream();
+                try
+                {
+                    
+                    var compressStream = new BrotliStream(inStream, CompressionMode.Decompress);
+                    compressStream.CopyTo(outStream);
+                    dec = outStream.ToArray();
+                    inStream.Dispose();
+                    outStream.Dispose();
+                    compressStream.Dispose();
+                    return true;
+                }
+                catch
+                {
+                    inStream.Dispose();
+                    outStream.Dispose();
+                    dec = [];
+                    return false;
+                }
+
             }
             public enum PacketType
             {
