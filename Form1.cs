@@ -44,10 +44,11 @@ namespace BiliLiveRecorder
         public static List<string> RID = new List<string>();
         public static List<Output> OutputLog = new List<Output>();
         public static Dictionary<string, System.Timers.Timer> activestreams = new Dictionary<string, System.Timers.Timer>();
-        public static string Ver = "Ver1.1.6";
+        public static string Ver = "Ver1.1.7";
         public static string tempstr = string.Empty;
         public static ulong FragmentsInMemoryC = 0;
         public static int RecordingC = 0;
+        public static HttpClientHandler httpClientHandler = new HttpClientHandler();
 
         public static string workdir = String.Empty + "BiliLiveRecorder_Files/";//work
         public static string SubDirName = "Record/{ROOM_ID}/{TIME_NOW}.{FILE_EXT}";//MUST use '/'
@@ -55,30 +56,45 @@ namespace BiliLiveRecorder
         public void UpdateLog(object source, ElapsedEventArgs e)
         {
             timer.Stop();
-            lock (UIlock)
+            try
             {
-                for (int i = 0; i < OutputLog.Count; i++)
+                lock (UIlock)
                 {
-                    Output output = OutputLog[i];
-                    WriteOutput(output);
-                    //if(output.Message.StartsWith("HLS/FMP4 : Received ") && MainOutput.Items[^1].SubItems[3].Text.StartsWith("HLS/FMP4 : Received "))
-                    //{
-                    //    MainOutput.Items.RemoveAt(MainOutput.Items.Count - 1);
-                    //}
-                    MainOutput.Items.Add(new ListViewItem(new string[] { DateTimeOffset.FromUnixTimeSeconds(output.Time).LocalDateTime.ToString(),
-            output.ID,output.Type,output.Message,output.Operation,output.OperatedFile,output.StreamPosition.ToString(),output.OperatedLength.ToString()}));
-
-
-                    OutputLog.Remove(output);
-                    while (MainOutput.Items.Count >= AutoClear)
+                    for (int i = 0; i < OutputLog.Count; i++)
                     {
-                        MainOutput.Items.RemoveAt(0);
+                        Output output = OutputLog[i];
+                        WriteOutput(output);/*
+                        if (output.Message.StartsWith("HLS/FMP4 : Received ") && MainOutput.Items[^1].SubItems[3].Text.StartsWith("HLS/FMP4 : Received "))
+                        {
+                            MainOutput.Items[^1].SubItems[0].Text = DateTimeOffset.FromUnixTimeSeconds(output.Time).LocalDateTime.ToString();
+                            MainOutput.Items[^1].SubItems[3].Text += $",{output.Message.Replace("HLS/FMP4 : Received ", "")}";
+                            MainOutput.Items[^1].SubItems[5].Text += $",{output.OperatedFile}";
+                            MainOutput.Items[^1].SubItems[6].Text = output.StreamPosition.ToString();
+                            MainOutput.Items[^1].SubItems[7].Text = (long.Parse(MainOutput.Items[^1].SubItems[7].Text) + output.OperatedLength).ToString();
+                        }
+                        else
+                        {*/
+                        MainOutput.Items.Add(new ListViewItem(new string[] { DateTimeOffset.FromUnixTimeSeconds(output.Time).LocalDateTime.ToString(),
+            output.ID,output.Type,output.Message,output.Operation,output.OperatedFile,output.StreamPosition.ToString(),output.OperatedLength.ToString()}));
+                        //}
+                        OutputLog.Remove(output);
+                        while (MainOutput.Items.Count >= AutoClear)
+                        {
+                            MainOutput.Items.RemoveAt(0);
+                        }
+                        if (MainOutput.SelectedItems.Count == 0 && MainOutput.Items.Count > 0) MainOutput.Items[^1].EnsureVisible();
                     }
-                    if (MainOutput.SelectedItems.Count == 0 && MainOutput.Items.Count > 0) MainOutput.Items[^1].EnsureVisible();
+                    Application.DoEvents();
                 }
-                Application.DoEvents();
             }
-            timer.Start();
+            catch(Exception ex)
+            {
+                MainOutput.Items.Add(new ListViewItem(new string[] { DateTime.Now.ToString(),"UI","Error",ex.Message,"-","-","0","0"}));
+            }
+            finally
+            {
+                timer.Start();
+            }
         }
         public void UpdateInfo(object source, ElapsedEventArgs e)
         {
@@ -89,14 +105,14 @@ namespace BiliLiveRecorder
             UptimeL.Text = ts.ToString();
             ActiveMonitoringL.Text = $"{RecordingC} / {activestreams.Count}";
             GIntervalL.Text = $"U{UpdateInterval} / I{UpdateInfoInterval} / M{Interval}";
-            OverrallBandwidthL.Text = $"°¸ {k.Key} / °˝ {k.Value}";
-            PktBWL.Text = $"°¸ {kmsg.Key} / °˝ {kmsg.Value}";
+            OverrallBandwidthL.Text = $"‚Üë {k.Key} / ‚Üì {k.Value}";
+            PktBWL.Text = $"‚Üë {kmsg.Key} / ‚Üì {kmsg.Value}";
             SOutputLinesL.Text = $"Cached {OutputLog.Count} / Shown {MainOutput.Items.Count} / Max {OutputLog.Capacity},{AutoClear}";
             FragmentsInMemoryL.Text = $"{FragmentsInMemoryC} / {MultiThread_WriteFileTrigger * RecordingC}";
             TPktL.Text = $"Recv {TotalRecvPacket} / Send {TotalSendPacket}";
 
-            OverrallTrafficL.Text = $"°¸ {Downloader.CountSize(Downloader.TotalUpload)} / °˝ {Downloader.CountSize(Downloader.TotalDownload)}";
-            PktTrafficL.Text = $"°¸ {Downloader.CountSize(Downloader.MsgTotalUpload)} / °˝ {Downloader.CountSize(Downloader.MsgTotalDownload)}";
+            OverrallTrafficL.Text = $"‚Üë {Downloader.CountSize(Downloader.TotalUpload)} / ‚Üì {Downloader.CountSize(Downloader.TotalDownload)}";
+            PktTrafficL.Text = $"‚Üë {Downloader.CountSize(Downloader.MsgTotalUpload)} / ‚Üì {Downloader.CountSize(Downloader.MsgTotalDownload)}";
         }
         private async void addStreamToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -165,7 +181,7 @@ namespace BiliLiveRecorder
         {
             if (e.Button == MouseButtons.Right)
             {
-                IDListMenu.Show(StreamIDList, e.Location);// Û±Í”“º¸∞¥œ¬µØ≥ˆ≤Àµ•
+                IDListMenu.Show(StreamIDList, e.Location);
             }
         }
 
@@ -220,7 +236,7 @@ namespace BiliLiveRecorder
         {
             if (e.Button == MouseButtons.Right)
             {
-                MainMenu.Show(MainOutput, e.Location);// Û±Í”“º¸∞¥œ¬µØ≥ˆ≤Àµ•
+                MainMenu.Show(MainOutput, e.Location);//Èº†Ê†áÂè≥ÈîÆÊåâ‰∏ãÂºπÂá∫ËèúÂçï
             }
         }
 
@@ -252,12 +268,14 @@ namespace BiliLiveRecorder
 
         private async void Form1_Load(object sender, EventArgs e)
         {
+            
+            httpClientHandler.Proxy = null;
+            httpClientHandler.UseProxy = false;
             if (fs.Position == 0)
             {
-                await fs.WriteAsync(rlogh);
-                await fs.WriteAsync(Encoding.Default.GetBytes("BiliLiveRecorder " + Form1.Ver));
-                fs.SetLength(512);
-                fs.Position = 512;
+                //await fs.WriteAsync(rlogh);
+                await fs.WriteAsync(Encoding.Default.GetBytes("BiliLiveRecorder Log File\r\n"));
+                await fs.WriteAsync(Encoding.Default.GetBytes("Version " + Form1.Ver + "\r\n"));
             }
             //
             SetSettings(await ReadSettings());
@@ -353,7 +371,7 @@ namespace BiliLiveRecorder
         {
             if (StreamIDList.SelectedItems != null)
             {
-                string id = StreamIDList.SelectedItems[0].Text.Split(" - ")[0];
+                string id = StreamIDList.SelectedItems[0].Text;
                 Process.Start(new ProcessStartInfo()
                 {
                     FileName = $"https://live.bilibili.com/{id}",
