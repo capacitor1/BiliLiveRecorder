@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -14,7 +15,6 @@ namespace BiliLiveRecorder
         public static string GetMsgStmJsonAPI = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?id={ROOM_ID}";
         public static string LiveInfoAPI = "https://api.live.bilibili.com/room/v1/Room/get_info?room_id={ROOM_ID}";
 
-        public static HttpClient client = new();
         public static int Retry = 5;
         public static async Task<JsonNode> GetRawJsonAsync(string id,string url,bool isauto)
         {
@@ -23,7 +23,7 @@ namespace BiliLiveRecorder
             int code = 0,retry1 = 0;
         Label_Retry:
             if (retry1 > Retry) return null;
-            code = await Downloader.Download(url.Replace("{ROOM_ID}", id), ms,new HttpClient(),tokenSource.Token);
+            code = await Downloader.Download(url.Replace("{ROOM_ID}", id), ms,tokenSource.Token);
             if (code == -1)
             {
                 LiveRecMain.ShowOutput(id, $"API/M : Request Error [Internal Error ({code})] , retrying {retry1} / {Retry}", "GET", OperatedFile: url.Replace("{ROOM_ID}", id));
