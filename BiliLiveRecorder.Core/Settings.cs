@@ -15,6 +15,6 @@ namespace BiliLiveRecorder.Core
             Proxy = null,
             UseProxy = false
         };
-        public static string[] ReplaceOptions = ["_bluray", "_prohevc", "_2500", "_1500"];
+        public static string[] ReplaceOptions = ["_bluray", "_prohevc", "_2500", "_1500", "_4000"];
     }
 }
