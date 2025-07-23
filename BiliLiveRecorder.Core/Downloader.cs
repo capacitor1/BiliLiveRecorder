@@ -135,17 +135,17 @@ namespace BiliLiveRecorder.Core
                 m_strSize = (FactSize / 1024.00 / 1024.00 / 1024.00).ToString("F5") + " GB";
             return m_strSize;
         }
-        public static KeyValuePair<string, string> CountBandWidth(bool istotal)//up/down
+        public static string CountBandWidth()//up/down
         {
-            ulong befored = istotal ? TotalDownload : 0;
+            ulong befored = TotalDownload;
             KeyValuePair<DateTime, ulong> t1 = new(DateTime.Now, befored);
             Thread.Sleep(1000);
-            ulong afterd = istotal ? TotalDownload : 0;
+            ulong afterd = TotalDownload;
             KeyValuePair<DateTime, ulong> t2 = new(DateTime.Now, afterd);
             ulong s = t2.Value - t1.Value;
             TimeSpan t = t2.Key - t1.Key;
             ulong v = s / (ulong)t.Seconds;
-            return new("", CountSize(v) + "/s");
+            return CountSize(v) + "/s";
         }
     }
 }

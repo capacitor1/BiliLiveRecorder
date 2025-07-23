@@ -69,6 +69,7 @@
             URLOpen = new ToolStripMenuItem();
             openLocalFileToolStripMenuItem = new ToolStripMenuItem();
             notifyIcon1 = new NotifyIcon(components);
+            ViewLogToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             groupBox1.SuspendLayout();
@@ -122,7 +123,7 @@
             // 
             // logToolStripMenuItem
             // 
-            logToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { copyToolStripMenuItem, clearToolStripMenuItem1, showErrorOnlyToolStripMenuItem });
+            logToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { copyToolStripMenuItem, clearToolStripMenuItem1, showErrorOnlyToolStripMenuItem, ViewLogToolStripMenuItem });
             logToolStripMenuItem.Name = "logToolStripMenuItem";
             logToolStripMenuItem.Size = new Size(44, 21);
             logToolStripMenuItem.Text = "日志";
@@ -425,6 +426,13 @@
             notifyIcon1.Text = "notifyIcon1";
             notifyIcon1.Visible = true;
             // 
+            // ViewLogToolStripMenuItem
+            // 
+            ViewLogToolStripMenuItem.Name = "ViewLogToolStripMenuItem";
+            ViewLogToolStripMenuItem.Size = new Size(180, 22);
+            ViewLogToolStripMenuItem.Text = "查看日志";
+            ViewLogToolStripMenuItem.Click += 查看日志ToolStripMenuItem_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
@@ -505,5 +513,6 @@
         private ToolStripMenuItem clearToolStripMenuItem1;
         public ToolStripMenuItem showErrorOnlyToolStripMenuItem;
         public NotifyIcon notifyIcon1;
+        private ToolStripMenuItem ViewLogToolStripMenuItem;
     }
 }

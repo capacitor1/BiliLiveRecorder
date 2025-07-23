@@ -1,5 +1,6 @@
 using BiliLiveRecorder.Core;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Timers;
 using Monitor = BiliLiveRecorder.Core.Monitor;
@@ -13,7 +14,6 @@ namespace BiliLiveRecorder
         {
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
-            Directory.CreateDirectory("BiliLiveRecorder_Files/Internal/Log/");
             System.Timers.Timer timer1 = new System.Timers.Timer(1000);
             timer1.Elapsed += new ElapsedEventHandler(UpdateInfo);
             timer1.AutoReset = true;
@@ -21,39 +21,39 @@ namespace BiliLiveRecorder
 
             Text += $" {Ver}";
         }
-        public static Dictionary<string,Recorder> Recorders = new Dictionary<string,Recorder>();
-        public static string Ver = "Ver 1.0.0+20250718";
-        public void OnLogUpdate(object? o, Core.Log.LogUpdateEventArgs e)
+        public static Dictionary<string, Recorder> Recorders = new Dictionary<string, Recorder>();
+        public static string Ver = "Ver 1.0.0+20250723";
+        public void OnLogUpdate(object? o, Log.LogUpdateEventArgs e)
         {
             string log = $"[{e.Level} <{e.Time}> {e.ID}]\r\n{e.Message}\r\n\r\n";
             fs.Write(Encoding.Default.GetBytes(log));
             fs.Flush();
             if (e.Level == Core.Log.LogLevel.Debug && showErrorOnlyToolStripMenuItem.Checked) return;
             Log.AppendText(log);
-            
 
-            if(e.Level == Core.Log.LogLevel.Messsage)
+
+            if (e.Level == Core.Log.LogLevel.Messsage)
             {
                 notifyIcon1.Visible = true; // 设置控件可见
                 notifyIcon1.Icon = Icon;
-                notifyIcon1.ShowBalloonTip(500,e.ID, e.Message, ToolTipIcon.Info);
+                notifyIcon1.ShowBalloonTip(500, e.ID, e.Message, ToolTipIcon.Info);
                 notifyIcon1.Visible = false; //
             }
         }
-        public void OnStatusChanged1(object? o, Core.Log.StatusChangedEventArgs e)
+        public void OnStatusChanged1(object? o, Log.StatusChangedEventArgs e)
         {
             try
             {
                 //Debug.WriteLine(e.ID);
-                foreach(ListViewItem item in StreamIDList.Items)
+                foreach (ListViewItem item in StreamIDList.Items)
                 {
-                    if(item.Text == e.ID) item.SubItems[2].Text = e.Status.ToString();
+                    if (item.Text == e.ID) item.SubItems[2].Text = e.Status.ToString();
                 }
             }
             catch
             {
                 return;
-            }   
+            }
         }
         public void UpdateInfo(object source, ElapsedEventArgs e)
         {
@@ -78,7 +78,7 @@ namespace BiliLiveRecorder
                 Recorder r = new(strID, "BiliLiveRecorder_Files");
                 r.LogUpdate += OnLogUpdate;
                 r.StatusChanged += OnStatusChanged1;
-                bool canadd = Recorders.TryAdd(strID,r);
+                bool canadd = Recorders.TryAdd(strID, r);
                 if (!canadd)
                 {
                     MessageBox.Show("房间已存在。", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -153,21 +153,26 @@ namespace BiliLiveRecorder
 
         private void removeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            DialogResult dr = MessageBox.Show("是否移除房间？", "Remove", MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
-
-            if (dr == DialogResult.OK)
+            if (StreamIDList.SelectedItems != null)
             {
-                if(StreamIDList.SelectedItems[0].SubItems[2].Text == "Running")
+                DialogResult dr = MessageBox.Show("是否移除房间？", "Remove", MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+
+                if (dr == DialogResult.OK)
                 {
-                    MessageBox.Show("必须先停止录制。");
-                    return;
+                    if (StreamIDList.SelectedItems[0].SubItems[2].Text == "Running" || StreamIDList.SelectedItems[0].SubItems[2].Text == "Recording")
+                    {
+                        MessageBox.Show("必须先停止录制。");
+                        return;
+                    }
+                    string s = StreamIDList.SelectedItems[0].Text;
+                    Recorder recorder = Recorders[s];
+                    recorder.Stop();
+                    Recorders.Remove(s);
+                    StreamIDList.Items.Remove(StreamIDList.SelectedItems[0]);
                 }
-                string s = StreamIDList.SelectedItems[0].Text;
-                Recorder recorder = Recorders[s];
-                recorder.Stop();
-                Recorders.Remove(s);
+                saveIDListToolStripMenuItem_Click(sender, e);
             }
-            saveIDListToolStripMenuItem_Click(sender, e);
+
         }
         private async void saveIDListToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -197,7 +202,7 @@ namespace BiliLiveRecorder
             }
             return [];
         }
-        public static FileStream fs = new(Path.Combine("BiliLiveRecorder_Files/Internal/Log/", "Log_" + System.DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_ffff") + ".log"), FileMode.OpenOrCreate, FileAccess.Write);
+        public static FileStream fs = new(Path.GetTempPath() + $"{Ver}.log", FileMode.Append, FileAccess.Write,FileShare.Read);
         private async void Form1_Load(object sender, EventArgs e)
         {
 
@@ -206,14 +211,14 @@ namespace BiliLiveRecorder
                 await fs.WriteAsync(Encoding.Default.GetBytes("BiliLiveRecorder Log File\r\n" + Form1.Ver + "\r\n"));
             }
             //
-            
+
             string[] s = await ReadIDList();
             foreach (string s2 in s)
             {
                 Recorder r = new(s2, "BiliLiveRecorder_Files");
                 r.LogUpdate += OnLogUpdate;
                 r.StatusChanged += OnStatusChanged1;
-                if (Recorders.TryAdd(s2,r))
+                if (Recorders.TryAdd(s2, r))
                 {
                     StreamIDList.Items.Add(new ListViewItem([s2, string.Empty, "Stop"]));
                 }
@@ -336,5 +341,13 @@ namespace BiliLiveRecorder
             Log.Text = string.Empty;
         }
 
+        private void 查看日志ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Process.Start(new ProcessStartInfo()
+            {
+                FileName = fs.Name,
+                UseShellExecute = true
+            });
+        }
     }
 }
