@@ -1,4 +1,5 @@
 using BiliLiveRecorder.Core;
+using BiliLiveRecorder.Core.API;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -18,11 +19,48 @@ namespace BiliLiveRecorder
             timer1.Elapsed += new ElapsedEventHandler(UpdateInfo);
             timer1.AutoReset = true;
             timer1.Enabled = true;
-
+            System.Timers.Timer timer11 = new System.Timers.Timer(1800000);
+            timer11.Elapsed += new ElapsedEventHandler(CheckNetwork);
+            timer11.AutoReset = true;
+            timer11.Enabled = true;
+            CheckNetwork(timer11, null);
             Text += $" {Ver}";
         }
         public static Dictionary<string, Recorder> Recorders = new Dictionary<string, Recorder>();
-        public static string Ver = "Ver 1.0.0+20250723";
+        public static string Ver = "Ver 1.0.0+20250729";
+        public async void CheckNetwork(object source, ElapsedEventArgs? e)
+        {
+            ((System.Timers.Timer)source).Enabled = false;
+            try
+            {
+                HttpClient client = new HttpClient(Settings.httpClientHandler);
+                client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36");
+                HttpResponseMessage response = await client.GetAsync($"https://api.live.bilibili.com/room/v1/Room/get_info?{await WBI.GetWBIByID("1")}", HttpCompletionOption.ResponseHeadersRead);
+                if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    if ((int)response.StatusCode >= 400)
+                    {
+                        throw new Exception($"Failed : {response.StatusCode}");
+                    }
+                }
+                Stream contentStream = await response.Content.ReadAsStreamAsync();
+                int i = contentStream.ReadByte();
+                throw new Exception($"Success : {(int)response.StatusCode} & FirstByte {i}");
+            }
+            catch (Exception ex)
+            {
+                string log = $"[NetworkCheck <{DateTime.Now}> 0]\r\n{ex.Message}\r\n\r\n";
+                fs.Write(Encoding.Default.GetBytes(log));
+                fs.Flush();
+                if(!ex.Message.StartsWith("Success")) Log.AppendText(log);
+            }
+            finally
+            {
+                ((System.Timers.Timer)source).Enabled = true;
+            }
+
+        }
+
         public void OnLogUpdate(object? o, Log.LogUpdateEventArgs e)
         {
             string log = $"[{e.Level} <{e.Time}> {e.ID}]\r\n{e.Message}\r\n\r\n";
@@ -63,7 +101,6 @@ namespace BiliLiveRecorder
             ActiveMonitoringL.Text = $"{rec.Count} / {Recorders.Count}";
             OverrallBandwidthL.Text = Monitor.GetDownloadSpeed();
             HTTPREQ.Text = Monitor.GetHttpRequests();
-
             OverrallTrafficL.Text = $"{Downloader.CountSize(Downloader.TotalDownload)}";
         }
         private async void addStreamToolStripMenuItem_Click(object sender, EventArgs e)
@@ -202,7 +239,7 @@ namespace BiliLiveRecorder
             }
             return [];
         }
-        public static FileStream fs = new(Path.GetTempPath() + $"{Ver}.log", FileMode.Append, FileAccess.Write,FileShare.Read);
+        public static FileStream fs = new(Path.GetTempPath() + $"{System.DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.log", FileMode.Append, FileAccess.Write,FileShare.Read);
         private async void Form1_Load(object sender, EventArgs e)
         {
 
