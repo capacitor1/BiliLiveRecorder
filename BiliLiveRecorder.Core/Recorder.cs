@@ -42,7 +42,7 @@ namespace BiliLiveRecorder.Core
         //
 
         RetryGm3u:
-            bool canstart = await GetData.IsLiving(_ID);
+            bool canstart = (await GetData.IsLiving(_ID,false)).Item1;
             if (!canstart)
             {
                 timer.Start();
@@ -143,11 +143,14 @@ namespace BiliLiveRecorder.Core
             long[] todownload = [];
             long total = 0, count = 0, totalthis = 0, countthis = 0, range = 0;
             DateTime s = DateTime.Now;
+            bool panic412 = false;
             try
             {
                 long last = 0;
-                while (await GetData.IsLiving(_ID) && _isRunning)
+                (bool, bool) iap = await GetData.IsLiving(_ID, panic412);
+                while (iap.Item1 && _isRunning)
                 {
+                    panic412 = iap.Item2;
                     //
                     totalthis = countthis = 0;
                     s = DateTime.Now;
@@ -273,11 +276,14 @@ namespace BiliLiveRecorder.Core
                             ID = _ID,
                             Message = $"总录制：{total}（{count} 个分片，{Downloader.CountSize((ulong)total)}）"
                         });
+                        panic412 = false;
                     }
-                    if (totalthis < 1)
+                    if(countthis == 0)
                     {
-                        await Task.Delay(1000);
+                        await Task.Delay(800);
                     }
+                    await Task.Delay(200);
+                    iap = await GetData.IsLiving(_ID, panic412);
                 }
                 //finish
                 m3u8.WriteLine("#EXT-X-ENDLIST");

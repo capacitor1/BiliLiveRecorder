@@ -12,6 +12,8 @@ namespace BiliLiveRecorder.Core
         public static ulong TotalDownload = 0;
         public static ulong TotalRequest = 0;
         public static ulong TotalRequestOK = 0;
+        public static ulong APIRequest = 0;
+        public static ulong APIRequestOK = 0;
 
         public static ArrayPool<byte> shared = ArrayPool<byte>.Shared;
         public static async Task<int> DownloadFile(string fileUrl, string path, CancellationToken cts)
@@ -23,6 +25,7 @@ namespace BiliLiveRecorder.Core
                 {
                     i = await Download(fileUrl, fs, cts);
                 }
+                if (i != 0) r++;
             }
             return i;
         }
@@ -35,12 +38,12 @@ namespace BiliLiveRecorder.Core
                 {
                     i = await Download(fileUrl, fs);
                 }
+                if (i != 0) r++;
             }
             return i;
         }
         public static async Task<int> Download(string fileUrl, Stream destinationStream, CancellationToken? cts = null)
         {
-        Retry:
             HttpClient client = new HttpClient(Settings.httpClientHandler);
             //if (client == null) client = new HttpClient(Form1.httpClientHandler);
             int ret = -1;
@@ -49,23 +52,21 @@ namespace BiliLiveRecorder.Core
                 client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36");
                 HttpResponseMessage response = await client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead);
 
-                TotalRequest++;
+                if (fileUrl.Contains("api.live.bilibili.com"))
+                {
+                    APIRequest++;
+                }
+                else
+                {
+                    TotalRequest++;
+                }
                 if (response.StatusCode != System.Net.HttpStatusCode.OK)
                 {
                     //Debug.WriteLine(response.StatusCode.ToString());
-                    if ((int)response.StatusCode != 404 && (int)response.StatusCode >= 400)
+                    if ((int)response.StatusCode >= 400)
                     {
-                        //client.Dispose();
-                        //client = null;
-                        //client = new HttpClient(Form1.httpClientHandler);
-                        goto Retry;
-                    }
-                    else
-                    {
-                        //LiveRecMain.ShowOutput($"[Error:Downloader] '{fileUrl}' returned 404");
-                        int r = (int)response.StatusCode;
-                        //client.Dispose();
-                        return r;
+                        await Task.Delay(500);
+                        return (int)response.StatusCode;
                     }
                 }
                 if (response.Content.Headers.ContentLength.HasValue)
@@ -117,7 +118,14 @@ namespace BiliLiveRecorder.Core
                 ret = -1;
             }
             await destinationStream.FlushAsync();
-            TotalRequestOK++;
+            if (fileUrl.Contains("api.live.bilibili.com"))
+            {
+                APIRequestOK++;
+            }
+            else
+            {
+                TotalRequestOK++;
+            }
             return ret;
         }
         public static string CountSize(ulong Size)

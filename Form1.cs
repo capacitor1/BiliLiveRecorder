@@ -27,7 +27,7 @@ namespace BiliLiveRecorder
             Text += $" {Ver}";
         }
         public static Dictionary<string, Recorder> Recorders = new Dictionary<string, Recorder>();
-        public static string Ver = "Ver 1.0.0+20250729";
+        public static string Ver = "Ver 1.0.0+20250823";
         public async void CheckNetwork(object source, ElapsedEventArgs? e)
         {
             ((System.Timers.Timer)source).Enabled = false;
@@ -40,7 +40,7 @@ namespace BiliLiveRecorder
                 {
                     if ((int)response.StatusCode >= 400)
                     {
-                        throw new Exception($"Failed : {response.StatusCode}");
+                        throw new Exception($"Failed : HTTP {(int)response.StatusCode}");
                     }
                 }
                 Stream contentStream = await response.Content.ReadAsStreamAsync();
@@ -52,7 +52,7 @@ namespace BiliLiveRecorder
                 string log = $"[NetworkCheck <{DateTime.Now}> 0]\r\n{ex.Message}\r\n\r\n";
                 fs.Write(Encoding.Default.GetBytes(log));
                 fs.Flush();
-                if(!ex.Message.StartsWith("Success")) Log.AppendText(log);
+                if (!ex.Message.StartsWith("Success")) Log.AppendText(log);
             }
             finally
             {

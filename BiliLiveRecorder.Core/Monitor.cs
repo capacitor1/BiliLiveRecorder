@@ -12,7 +12,7 @@ namespace BiliLiveRecorder.Core
         public static readonly DateTime Uptime = DateTime.Now;
         public static string GetDownloadSpeed() => Downloader.CountBandWidth();
         public static string GetTotalDownload() => Downloader.CountSize(Downloader.TotalDownload);
-        public static string GetHttpRequests() => $"{Downloader.TotalRequestOK} OK / {Downloader.TotalRequest} Send";
+        public static string GetHttpRequests() => $"A{Downloader.APIRequestOK}+F{Downloader.TotalRequestOK} OK / A{Downloader.APIRequest}+F{Downloader.TotalRequest} Send";
         public static string GetUpTime() => (DateTime.Now - Uptime).ToString();
     }
 }

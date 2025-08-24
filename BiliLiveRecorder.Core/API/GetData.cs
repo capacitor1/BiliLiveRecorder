@@ -10,8 +10,10 @@ namespace BiliLiveRecorder.Core.API
 {
     internal class GetData
     {
-        public static async Task<bool> IsLiving(string ID)
+        public static async Task<(bool,bool)> IsLiving(string ID,bool panic)//isliving,ispanic
         {
+            
+            if (panic) return (true, true);
             MemoryStream ms = new MemoryStream();
             int code = -1, r = 0;
             bool isliving = false;
@@ -23,7 +25,7 @@ namespace BiliLiveRecorder.Core.API
                     int scode = await Downloader.Download(Endpoint.Info + wbi, ms, new CancellationTokenSource(Settings.TimeOut).Token);
                     if (scode != 0) continue;
                     JsonNode JObjectNode = JsonArray.Parse(ms.ToArray())!;
-                    if ((int)JObjectNode["code"]! != 0) return false;
+                    if ((int)JObjectNode["code"]! != 0) return (false,false);
                     string livings = JObjectNode["data"]!["live_status"]!.ToString();
                     if (livings == "1") isliving = true;
                     code = scode;
@@ -33,12 +35,18 @@ namespace BiliLiveRecorder.Core.API
                     code = -1;
                     r++;
                 }
+                if (code == 412)
+                {
+                    return (true,true);
+                }
             }
             ms.Dispose();
-            return isliving;
+            
+            return (isliving,false);
         }
         public static async Task<string> GetM3U8URL(string ID)
         {
+            
             MemoryStream ms = new MemoryStream();
             int code = -1, r = 0;
             string url = string.Empty;
@@ -121,10 +129,12 @@ namespace BiliLiveRecorder.Core.API
                 }
             }
             ms.Dispose();
+            if (code == 0) Downloader.APIRequestOK++;
             return url;
         }
         public static async Task<string[]> GetInfoText(string ID)
         {
+            
             MemoryStream ms = new MemoryStream();
             int code = -1, r = 0;
             List<string> list = new List<string>();
@@ -159,10 +169,12 @@ namespace BiliLiveRecorder.Core.API
                 }
             }
             ms.Dispose();
+            if (code == 0) Downloader.APIRequestOK++;
             return list.ToArray();
         }
         public static async Task<string> GetRID(string ID)
         {
+            
             MemoryStream ms = new MemoryStream();
             int code = -1, r = 0;
             string rid = string.Empty;
@@ -182,10 +194,12 @@ namespace BiliLiveRecorder.Core.API
                 catch { code = -1; r++; }
             }
             ms.Dispose();
+            if (code == 0) Downloader.APIRequestOK++;
             return rid;
         }
         public static async Task<string> GetTitle(string ID)
         {
+            
             MemoryStream ms = new MemoryStream();
             int code = -1, r = 0;
             string rid = string.Empty;
@@ -196,6 +210,10 @@ namespace BiliLiveRecorder.Core.API
 
                     string wbi = await WBI.GetWBIByID(ID);
                     int scode = await Downloader.Download(Endpoint.Info + wbi, ms, new CancellationTokenSource(Settings.TimeOut).Token);
+                    if (scode == 412)
+                    {
+                        return "Failed 412.";
+                    }
                     if (scode != 0) continue;
                     JsonNode json = JsonArray.Parse(ms.ToArray())!;
                     if ((int)json["code"]! != 0) return $"Error : {(string)json["message"]!} ({(int)json["code"]!})";
@@ -205,10 +223,12 @@ namespace BiliLiveRecorder.Core.API
                 catch { code = -1; r++; }
             }
             ms.Dispose();
+            if (code == 0) Downloader.APIRequestOK++;
             return rid;
         }
         public static async Task<string> GetCover(string ID)
         {
+            
             MemoryStream ms = new MemoryStream();
             int code = -1;
             int retry = 0;
@@ -224,6 +244,7 @@ namespace BiliLiveRecorder.Core.API
                 code = scode;
             }
             ms.Dispose();
+            if (code == 0) Downloader.APIRequestOK++;
             return rid;
         }
         public static async Task<string[]> ReadM3U8URL(string url)
