@@ -27,7 +27,7 @@ namespace BiliLiveRecorder
             Text += $" {Ver}";
         }
         public static Dictionary<string, Recorder> Recorders = new Dictionary<string, Recorder>();
-        public static string Ver = "Ver 1.0.0+20250823";
+        public static string Ver = "Ver 1.0.0+20250831";
         public async void CheckNetwork(object source, ElapsedEventArgs? e)
         {
             ((System.Timers.Timer)source).Enabled = false;

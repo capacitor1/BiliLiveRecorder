@@ -28,6 +28,18 @@ namespace BiliLiveRecorder.Core.FMP4Processor
             }
             return [.. pieces];
         }
+        public static string GetMapLine(string[] m3u8)
+        {
+            string s = string.Empty;
+            foreach (string item in m3u8)
+            {
+                if (item.StartsWith("#EXT-X-MAP"))
+                {
+                    s = item;
+                }
+            }
+            return s;
+        }
         public static async Task WriteM3U(string[] m3u, StreamWriter sw, string dir, string ID, string serverhost, EventHandler<LogUpdateEventArgs>? eventHandler)
         {
             List<string> purem3u = [];

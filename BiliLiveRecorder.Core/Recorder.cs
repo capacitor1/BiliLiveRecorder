@@ -161,6 +161,63 @@ namespace BiliLiveRecorder.Core
                         throw new Exception("Invalid M3U8.");
                     }
                     todownload = M3U8.GetPieces(thism3u);
+                    if(last == 0)
+                    {
+                        //download previous
+                        long[] longs = new long[40];//40x m4s
+                        for (int i = 0; i < longs.Length; i++)
+                        {
+                            longs[i] = todownload.First() - (40 - i);
+                        }
+                        //
+                        foreach(long m4si in longs)
+                        {
+#pragma warning disable CS4014 // NO AWAIT
+                            Task.Run(async () =>//1
+                            {
+                                string fn = Path.Combine(DIR, $"{m4si}.m4s");
+                                if (!File.Exists(fn))
+                                {
+                                    int ret = await Downloader.DownloadFileOnece($"{serverhost}{m4si}.m4s", fn);
+                                    if (ret != 0)
+                                    {
+                                        LogUpdate?.Invoke(this, new()
+                                        {
+                                            Level = LogLevel.Debug,
+                                            Time = DateTime.Now,
+                                            ID = _ID,
+                                            Message = $"Previous {m4si}.m4s is expired."
+                                        });
+                                        if (File.Exists(fn)) { File.Delete(fn); }
+                                    }
+                                    else
+                                    {
+                                        LogUpdate?.Invoke(this, new()
+                                        {
+                                            Level = LogLevel.Debug,
+                                            Time = DateTime.Now,
+                                            ID = _ID,
+                                            Message = $"Received {m4si}.m4s[{new FileInfo(fn).Length}]"
+                                        });
+                                    }
+                                }
+                            });
+#pragma warning restore CS4014 // NO AWAIT
+                        }
+                        //
+                        //await Task.Delay(1000);
+                        //string[] towr = Directory.GetFiles(DIR,"*.m4s");
+                        //get X_MAP
+                        //string m3umap = M3U8.GetMapLine(thism3u);
+                        //await m3u8.WriteLineAsync(m3umap);
+                        //foreach (string m4si in towr)
+                        //{
+                        //    await m3u8.WriteLineAsync($"#EXT-PREVIOUS:Guessed|1.00");
+                        //    await m3u8.WriteLineAsync($"#EXTINF:1.00");
+                        //    await m3u8.WriteLineAsync(Path.GetFileName(m4si));
+                        //}
+                        //await m3u8.FlushAsync();
+                    }
                     if (todownload.First() - last > 1 && last != 0)
                     {
                         List<long> rep = [];

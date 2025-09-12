@@ -16,6 +16,15 @@ namespace BiliLiveRecorder.Core
         public static ulong APIRequestOK = 0;
 
         public static ArrayPool<byte> shared = ArrayPool<byte>.Shared;
+        public static async Task<int> DownloadFileOnece(string fileUrl, string path)
+        {
+            int i = 0;
+            using (FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                i = await Download(fileUrl, fs);
+            }
+            return i;
+        }
         public static async Task<int> DownloadFile(string fileUrl, string path, CancellationToken cts)
         {
             int i = -1, r = 0;
