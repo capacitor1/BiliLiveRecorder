@@ -50,7 +50,7 @@ B站直播录制器（强制原画）
 
 - Http请求可能出现OK数量大于Send数量的情况：
 
-<img width="352" height="24" alt="{4B30F4B1-9AD2-4D85-BAAF-B29104AD1C53}" src="https://github.com/user-attachments/assets/2c912244-c418-4acc-b4a6-bf126ea6132d" 
+<img width="352" height="24" alt="{4B30F4B1-9AD2-4D85-BAAF-B29104AD1C53}" src="https://github.com/user-attachments/assets/2c912244-c418-4acc-b4a6-bf126ea6132d" />
 
 [^1]:录制的直播为M3U8+HLS格式，在录制未结束时，使用 [MPV](https://mpv.io/) 打开`_Index.m3u8`文件可直接观看直播（同步进度）。也可用FFMPEG直接对m3u8进行实时合并。*注意，使用此法本地看直播必须保证网络通畅，录制速度大于等于直播进行速度，录制过慢而播放更快会使软件认为已经播放完毕而自动退出。*
 
